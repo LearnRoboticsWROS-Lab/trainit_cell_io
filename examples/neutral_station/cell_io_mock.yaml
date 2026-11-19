@@ -1,0 +1,78 @@
+# The PUBLIC neutral fixture (P0B_DESIGN.md §5): a customer-neutral turn station and a line indexer.
+# The cell's machine-simulation file (hand-written until M5a / CellSpec): the robot application names `turner` and
+# `indexer` only; this file says what serves them. cell_io_mock.yaml and cell_io_isaac.yaml differ ONLY in the
+# `plant:` line (a test pins it): the same station logic, the same timeouts, two plant adapters.
+#   mock:  ros2 launch trainit_cell_io cell_io.launch.py config:=<this file with plant: mock>
+#   isaac: the stage runner (run_neutral_station.py, inside Isaac Sim) + cell_io_bridge.launch.py (README.md)
+cell_io: 1
+control_mode: simulation
+plant: mock
+robot_slot: ''
+scan: {physics_dt_ms: 5, scan_every_steps: 2, status_period_ms: 100}
+
+devices:
+  clamp: {type: binary_actuator, timeout_ms: 2000, description: the jaw that holds the part on the turntable}
+  table:
+    type: position_axis
+    unit: deg
+    positions: {load: 0.0, turned: 180.0}
+    band: 1.0
+    timeout_ms: 4000
+    description: the turntable (revolute, vertical axis)
+  part_present: {type: digital_sensor, description: a part is in the turntable's nest}
+  index:
+    type: position_axis
+    unit: mm
+    positions: {home: 0.0, forward: 300.0}
+    band: 1.0
+    timeout_ms: 4000
+    description: the line indexer's carriage (prismatic, one 300 mm stroke)
+
+services:
+  turner:
+    description: turn the part (clamp, half a turn, unclamp, back)
+    logic: python_logic
+    cycle:
+      - {require: part_present}
+      - {close: clamp}
+      - {move: table, to: turned}
+      - {open: clamp}
+      - {move: table, to: load}
+    home:
+      - {open: clamp}
+      - {move: table, to: load}
+  indexer:
+    description: index the line by one stroke (from home, forward; DONE in position)
+    logic: python_logic
+    cycle:
+      - {move: index, to: home}
+      - {move: index, to: forward}
+    home:
+      - {move: index, to: home}
+
+# plant: mock -- the deterministic time model (trainit_cell_io.core.mock_plant)
+mock:
+  seed: 1
+  jitter: 0.0
+  devices:
+    clamp: {close_ms: 300, open_ms: 300}
+    table: {speed: 180.0, start: load}
+    part_present: {value: true}
+    index: {speed: 200.0, start: home}
+
+# plant: isaac -- the articulations of the neutral stage (examples/neutral_station/build_neutral_station.py), read
+# back every scan (trainit_cell_io.isaac.plant). Joint values in metres (prismatic) / the axis unit (deg, mm).
+isaac:
+  stage: neutral_station
+  articulations:
+    station: /World/neutral_station/station
+    indexer: /World/neutral_station/indexer
+  devices:
+    clamp: {articulation: station, joint: jaw_joint, open_m: 0.0, closed_m: 0.018, band_m: 0.003, stroke_ms: 300}
+    table: {articulation: station, joint: turntable_joint, speed: 180.0}
+    index: {articulation: indexer, joint: carriage_joint, speed: 200.0}
+    part_present:
+      part: /World/neutral_station/part
+      frame: /World/neutral_station/station/turntable
+      nest_m: [0.1, 0.0, 0.04]
+      tolerance_m: 0.01

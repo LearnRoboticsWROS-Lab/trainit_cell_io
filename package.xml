@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>trainit_cell_io</name>
+  <version>0.1.0</version>
+  <description>
+    TrainIt simulation control of a cell's machines (P0.b; ADR-0013 Amendment P0): devices (binary
+    actuators, position axes, digital sensors), station sequences (the python_logic backend), one
+    ProcessDevice per machine service implementing the source's rules of the machine-service contract
+    (trainit_interfaces ChannelRequest / ChannelStatus), and a plant adapter -- a deterministic mock
+    with fault injection, or an Isaac Sim articulation through a std_msgs boundary and a ROS-side
+    bridge. A cell-level process, started apart from the robot. Not a PLC, not a safety function
+    (ADR-0033).
+  </description>
+  <maintainer email="ros.master.ai@gmail.com">fra</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>rosgraph_msgs</exec_depend>            <!-- the Isaac stage's /clock (Kit side) -->
+  <exec_depend version_gte="0.5.0">trainit_interfaces</exec_depend>   <!-- ChannelRequest / ChannelStatus -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
